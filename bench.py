@@ -134,23 +134,49 @@ def main():
 
     plot_results(results, args.workers)
 
-    # Optionally write CSV in one-row-per-size format
+    # Optionally write CSV in one-row-per-size format; merge with existing file if present
     if args.csv:
         import csv
         csv_path = args.csv
-        # build header: size bytes, size mb, cbc, then per-worker CTR columns
         worker_cols = [f'workers_{w}(time_s)' for w in args.workers]
         header = ['size_bytes', 'size_mb', 'cbc(time_s)'] + worker_cols
+
+        # Load existing rows (keyed by size_bytes) if file exists
+        existing = {}
+        if os.path.exists(csv_path):
+            try:
+                with open(csv_path, 'r', newline='') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        key = row.get('size_bytes')
+                        if key:
+                            existing[key] = row
+            except Exception:
+                # If reading fails, continue with empty existing
+                existing = {}
+
+        # Update existing entries (or add new) using current results
+        for s in sorted(results.keys()):
+            size_mb = s / 1024 / 1024
+            row = {col: '' for col in header}
+            row['size_bytes'] = str(s)
+            row['size_mb'] = f"{size_mb:.6f}"
+            row['cbc(time_s)'] = f"{results[s]['CBC'][None]:.6f}"
+            for w in args.workers:
+                col = f'workers_{w}(time_s)'
+                val = results[s]['CTR_par'].get(w, None)
+                row[col] = f"{val:.6f}" if val is not None else ''
+            existing[str(s)] = row
+
+        # Write merged file (overwrite with merged content)
         with open(csv_path, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(header)
-            for s in sorted(results.keys()):
-                size_mb = s / 1024 / 1024
-                row = [s, f"{size_mb:.6f}", f"{results[s]['CBC'][None]:.6f}"]
-                for w in args.workers:
-                    t = results[s]['CTR_par'].get(w, None)
-                    row.append(f"{t:.6f}" if t is not None else '')
-                writer.writerow(row)
+            writer = csv.DictWriter(f, fieldnames=header)
+            writer.writeheader()
+            for key in sorted(existing.keys(), key=lambda x: int(x)):
+                # ensure the row has exactly the header keys
+                out_row = {k: existing[key].get(k, '') for k in header}
+                writer.writerow(out_row)
+
         print(f'Wrote CSV results to {csv_path}')
 
 
