@@ -16,7 +16,7 @@ pip install -r requirements.txt
 Running benchmark
 
 ```powershell
-python bench.py --sizes 1024 1048576 --workers 1 2 4 --runs 3
+python bench.py --sizes 1048576 5242880 --workers 1 2 4 --runs 3 --csv results.csv
 ```
 
 Notes
