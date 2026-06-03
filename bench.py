@@ -139,7 +139,7 @@ def main():
         import csv
         csv_path = args.csv
         worker_cols = [f'workers_{w}(time_s)' for w in args.workers]
-        header = ['size_bytes', 'size_mb', 'cbc(time_s)'] + worker_cols
+        header = ['size_bytes', 'size_mb', 'cbc(time_s)', 'ctr_seq(time_s)'] + worker_cols
 
         # Load existing rows (keyed by size_bytes) if file exists
         existing = {}
@@ -162,6 +162,7 @@ def main():
             row['size_bytes'] = str(s)
             row['size_mb'] = f"{size_mb:.6f}"
             row['cbc(time_s)'] = f"{results[s]['CBC'][None]:.6f}"
+            row['ctr_seq(time_s)'] = f"{results[s]['CTR_seq'][None]:.6f}"
             for w in args.workers:
                 col = f'workers_{w}(time_s)'
                 val = results[s]['CTR_par'].get(w, None)
